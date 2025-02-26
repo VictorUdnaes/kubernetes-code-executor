@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ktor-server-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ktor-server-deployment
+  template:
+    metadata:
+      labels:
+        app: ktor-server-deployment
+    spec:
+      containers:
+        - name: ktor-server-container
+          image: vudnaes/ktor-server:latest
+          ports:
+            - containerPort: 8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ktor-server-service
+spec:
+  type: NodePort
+  selector:
+    app: ktor-server-deployment
+  ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+      nodePort: 30000
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  namespace: default
+  name: code-execution-role
+rules:
+  - apiGroups: [""]
+    resources: ["configmaps", "pods", "secrets", "pods/exec", "pods/log"]
+    verbs: ["create", "get", "list", "update", "delete", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["create", "get"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  namespace: default
+  name: code-execution-role-binding
+roleRef:
+    name: code-execution-role
+    kind: Role
+    apiGroup: rbac.authorization.k8s.io
+subjects:
+  - kind: ServiceAccount
+    name: default
+    namespace: default
